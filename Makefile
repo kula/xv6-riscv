@@ -149,16 +149,13 @@ LPROGS=\
 
 ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
 
-## $L/_fib_main.o:	$L/_fib_main.c
-## 	$(CC) $(CFLAGS) $L/_fib_main.c -o $L/_fib_main.o
+$L/fib.o: $L/fib.s
+	$(AS) $L/fib.s -o $@
 
-$L/_fib.o: $L/_fib.s
-	$(AS) $L/_fib.s -o $@
-
-$L/_fib: $L/_fib_main.o $L/_fib.o $(ULIB)
+$L/_fib: $L/fib_main.o $L/fib.o $(ULIB)
 	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $^
-	$(OBJDUMP) -S $@ > $L/_fib.asm
-	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $L/_fib.sym
+	$(OBJDUMP) -S $@ > $L/fib.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $L/fib.sym
 
 #
 #
