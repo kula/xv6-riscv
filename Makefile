@@ -1,5 +1,6 @@
 K=kernel
 U=user
+L=local
 
 OBJS = \
   $K/entry.o \
@@ -51,7 +52,7 @@ endif
 QEMU = qemu-system-riscv64
 
 CC = $(TOOLPREFIX)gcc
-AS = $(TOOLPREFIX)gas
+AS = $(TOOLPREFIX)as
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
@@ -140,8 +141,30 @@ UPROGS=\
 	$U/_wc\
 	$U/_zombie\
 
-fs.img: mkfs/mkfs README $(UPROGS)
-	mkfs/mkfs fs.img README $(UPROGS)
+# Locally developed programs
+#
+LPROGS=\
+       $L/_fib\
+
+
+ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
+
+## $L/_fib_main.o:	$L/_fib_main.c
+## 	$(CC) $(CFLAGS) $L/_fib_main.c -o $L/_fib_main.o
+
+$L/_fib.o: $L/_fib.s
+	$(AS) $L/_fib.s -o $@
+
+$L/_fib: $L/_fib_main.o $L/_fib.o $(ULIB)
+	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $^
+	$(OBJDUMP) -S $@ > $L/_fib.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $L/_fib.sym
+
+#
+#
+
+fs.img: mkfs/mkfs README $(UPROGS) $(LPROGS)
+	mkfs/mkfs fs.img README $(UPROGS) $(LPROGS)
 
 -include kernel/*.d user/*.d
 
@@ -151,7 +174,8 @@ clean:
 	$U/initcode $U/initcode.out $K/kernel fs.img \
 	mkfs/mkfs .gdbinit \
         $U/usys.S \
-	$(UPROGS)
+	$(UPROGS) \
+	$(LPROGS)
 
 # try to generate a unique GDB port
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)
